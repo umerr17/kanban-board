@@ -16,13 +16,16 @@ pipeline {
             }
         }
         
-        stage('Build & Deploy') {
-            steps {
-                // Rebuild only modified layers and swap out containers
-                sh 'docker-compose down'
-                sh 'docker-compose up --build -d'
-            }
-        }
+        
+stage('Build & Deploy') {
+    steps {
+        sh 'docker-compose down'
+        sh 'docker-compose up -d db'
+        sh 'docker-compose run --rm db-migrate'
+        sh 'docker-compose up --build -d api client'
+    }
+}
+
         
         stage('Health Check') {
             steps {

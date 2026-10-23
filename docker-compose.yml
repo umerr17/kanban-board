@@ -1,7 +1,7 @@
+
 version: '3.8'
 
 services:
-  # 1. The Database Service
   db:
     image: postgres:15-alpine
     restart: always
@@ -13,28 +13,44 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kanban_user -d kanban_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
-  # 2. The Express Backend Service
+  db-migrate:
+    image: postgres:15-alpine
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: kanban_user
+      PGPASSWORD: kanban_password
+      PGDATABASE: kanban_db
+    volumes:
+      - ./db/init.sql:/schema.sql:ro
+    command: ["psql", "-v", "ON_ERROR_STOP=1", "-f", "/schema.sql"]
+
   api:
-    build: 
+    build:
       context: ./backend
     ports:
       - "5000:5000"
     environment:
-      # Notice the host is 'db' - it matches the service name above!
       DATABASE_URL: postgres://kanban_user:kanban_password@db:5432/kanban_db
     depends_on:
       - db
 
-  # 3. The React Frontend Service
   client:
     build:
       context: ./frontend
     ports:
-      - "8080:80" # Maps your computer's port 8080 to Nginx's internal port 80
+      - "8080:80"
     depends_on:
       - api
 
-# Define a persistent volume for the database
 volumes:
   pgdata:
