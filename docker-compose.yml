@@ -31,7 +31,7 @@ services:
       PGPASSWORD: kanban_password
       PGDATABASE: kanban_db
     volumes:
-      - .backend/db/init.sql:/schema.sql:ro
+      - ./backend/db/init.sql:/schema.sql:ro
     command: ["psql", "-v", "ON_ERROR_STOP=1", "-f", "/schema.sql"]
 
   api:
