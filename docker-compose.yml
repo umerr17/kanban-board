@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  # 1. The Database Service
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: kanban_user
+      POSTGRES_PASSWORD: kanban_password
+      POSTGRES_DB: kanban_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # 2. The Express Backend Service
+  api:
+    build: 
+      context: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      # Notice the host is 'db' - it matches the service name above!
+      DATABASE_URL: postgres://kanban_user:kanban_password@db:5432/kanban_db
+    depends_on:
+      - db
+
+  # 3. The React Frontend Service
+  client:
+    build:
+      context: ./frontend
+    ports:
+      - "8080:80" # Maps your computer's port 8080 to Nginx's internal port 80
+    depends_on:
+      - api
+
+# Define a persistent volume for the database
+volumes:
+  pgdata:
