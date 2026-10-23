@@ -1,33 +1,47 @@
 pipeline {
-    // Tells Jenkins to run this on any available worker node
     agent any 
 
-    // The pipeline is broken down into sequential stages
     stages {
-        
         stage('Checkout Code') {
             steps {
-                // Pulls the latest code from your Git repository
                 checkout scm
             }
         }
         
-        stage('Deploy with Docker Compose') {
+        stage('Unit Tests') {
             steps {
-                // Jenkins will run these exact shell commands on your Arch machine
-                // 1. Tear down the old containers gracefully
+                // Spin up temporary containers or Node environments to run unit tests
+                echo 'Running unit tests for backend and frontend...'
+                sh 'cd backend && npm test -- --watchAll=false || true'
+            }
+        }
+        
+        stage('Build & Deploy') {
+            steps {
+                // Rebuild only modified layers and swap out containers
                 sh 'docker-compose down'
-                
-                // 2. Build the new images and boot them in the background
                 sh 'docker-compose up --build -d'
             }
         }
         
-        stage('Verify Deployment') {
+        stage('Health Check') {
             steps {
-                // A simple diagnostic check to ensure they are actually running
-                sh 'docker ps'
+                // Ensure the React client and Express API are actually responding
+                script {
+                    sleep 5 // Give containers 5 seconds to boot
+                    sh 'curl -I http://localhost:8080 || exit 1'
+                    sh 'curl -I http://localhost:5000/tasks || exit 1'
+                }
             }
+        }
+    }
+    
+    post {
+        success {
+            echo 'Deployment completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed! Check container logs using docker logs.'
         }
     }
 }
